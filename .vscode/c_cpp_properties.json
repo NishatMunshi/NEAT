@@ -1,0 +1,23 @@
+{
+    "configurations": [
+        {
+            "name": "Win32",
+            "includePath": [
+                "E:/Code/NEAT/include",
+                "E:/Code/custom_libraries",
+                "E:/programming_tools/SFML-2.5.1/include"
+            ],
+            "defines": [
+                "_DEBUG",
+                "UNICODE",
+                "_UNICODE"
+            ],
+            "compilerPath": "E:\\programming_tools\\msys64\\mingw64\\bin\\gcc.exe",
+            "cStandard": "c17",
+            "cppStandard": "gnu++20",
+            "intelliSenseMode": "windows-gcc-x64",
+            "configurationProvider": "ms-vscode.cpptools"
+        }
+    ],
+    "version": 4
+}
