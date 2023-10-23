@@ -3,15 +3,15 @@
 #include "Neuron.hpp"
 #include "E:/Code/custom_libraries/list.hpp"
 #include "Gene.hpp"
-#include <list>
+#include <set>
 #include <map>
 
 // TEST
 #include "E:/programming_tools/SFML-2.5.1/include/SFML/Graphics.hpp"
 #define WINDOW_DIMENSION 900
+
 struct Network
 {
-
 public:
     typedef std::vector<Neuron *> Layer; // we may need to add a new neuron but that can be pushed from the back
     myLib::list<Layer> neuralNetwork;    // we may need to insert a new layer in the middle, so we use list
@@ -28,14 +28,12 @@ public:
         neuralNetwork.push_back(Layer());  // output
 
         // find which neurons are needed for this genome
-        std::list<unsigned> neededNeuronIDs;
+        std::set<unsigned> neededNeuronIDs;
         for (auto &gene : _genome.synapseGenome)
         {
-            neededNeuronIDs.push_back(gene.startingNeuronID);
-            neededNeuronIDs.push_back(gene.endingNeuronID);
+            neededNeuronIDs.insert(gene.startingNeuronID);
+            neededNeuronIDs.insert(gene.endingNeuronID);
         }
-        neededNeuronIDs.sort();
-        neededNeuronIDs.unique();
 
         for (auto &neededNeuronID : neededNeuronIDs)
         {

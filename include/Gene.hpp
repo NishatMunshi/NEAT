@@ -16,12 +16,14 @@ struct NeuronGene
 
     NeuronGene(const NeuronType &_type) : type(_type) {}
 };
+
 struct SynapseGene
 {
     unsigned startingNeuronID, endingNeuronID;
     float weight;
     bool enabled;
 
+    static unsigned innovation;
     SynapseGene(const unsigned _startingNeuronID, const unsigned _endingNeuronID) : startingNeuronID(_startingNeuronID), endingNeuronID(_endingNeuronID)
     {
         // generate a random weight between -1 and 1
@@ -30,9 +32,11 @@ struct SynapseGene
 
         // each new synapseGene starts enabled
         enabled = true;
+
+        ++innovation;
     }
 
-    inline unsigned innovation_number(void) const { return power(2, startingNeuronID) * power(3, endingNeuronID) + unsigned(enabled); }
+    inline unsigned innovation_number(void) const { return innovation; }
 
     inline void change_weight(void)
     {
@@ -40,6 +44,9 @@ struct SynapseGene
         weight = randomWeight;
     }
 };
+
+unsigned SynapseGene::innovation = 0;
+
 struct Genome
 {
     std::vector<SynapseGene> synapseGenome;
