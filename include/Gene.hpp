@@ -1,53 +1,56 @@
 #pragma once
 #include <cstdint>
+#include <utility>
+#include <map>
 #include "E:/Code/custom_libraries/randomNumberGenerator.hpp"
 #include "E:/Code/custom_libraries/math.hpp"
 #include "Neuron.hpp"
 #include <unordered_map>
+#include <set>
 
+typedef unsigned ID;
 enum NeuronType : uint8_t
 {
     SENSOR,
     HIDDEN,
     MOTOR
 };
-struct NeuronGene
-{
-    NeuronType type;
+typedef std::pair<ID, NeuronType> NeuronGene;
+typedef std::map<ID, NeuronType> NeuronGenome;
 
-    NeuronGene(const NeuronType &_type) : type(_type) {}
-};
-
-struct SynapseGene
+struct InnovationID
 {
-    unsigned startingNeuronID, endingNeuronID;
+    unsigned startingNeuronID;
+    unsigned endingNeuronID;
+
+    InnovationID(const unsigned _startingNeuronID, const unsigned _endingNeuronID) : startingNeuronID(_startingNeuronID), endingNeuronID(_endingNeuronID) {}
+
+}; // startingNeuronID, endingNeuronID
+struct SynapseProperties
+{
     float weight;
     bool enabled;
 
-    unsigned innovationNumber;
-
-    SynapseGene(const unsigned _startingNeuronID, const unsigned _endingNeuronID, const unsigned _innovationNumber) : startingNeuronID(_startingNeuronID), endingNeuronID(_endingNeuronID), innovationNumber(_innovationNumber)
+    SynapseProperties(void)
     {
-        // generate a random weight between -1 and 1
-        auto randomFloat = (float)random_16.generate() / INT16_MIN;
-        weight = randomFloat;
-
-        // each new synapseGene starts enabled
-        enabled = true;
-
-        ++innovationNumber;
-    }
-
-    inline void change_weight(void)
-    {
-        auto randomWeight = (float)random_32.generate() / INT32_MIN;
+        float randomWeight = float(random_16.generate()) / INT16_MIN;
         weight = randomWeight;
+
+        enabled = true;
     }
+};
+typedef std::pair<InnovationID, SynapseProperties> SynapseGene;
+typedef std::map<InnovationID, SynapseProperties> SynapseGenome;
+struct GenePool
+{
+    NeuronGenome neuronGenePool;
+    SynapseGenome synapseGenePool;
 };
 
 struct Genome
 {
-    std::map<unsigned, SynapseGene> synapseGenome;
+    NeuronGenome neuronGenome;
+    SynapseGenome synapseGenome;
 
     float score = 0; // denotes how well this brain performed
 
@@ -58,10 +61,7 @@ struct Genome
         // loop through all the synapseGenes of _other and randomly flip some genes if flippable
         for (auto &otherGene : _other.synapseGenome)
         {
-            bool matched = false;
-
-            // keep a record whether we matched this gene
-            matched = child.synapseGenome.find(otherGene.first) not_eq child.synapseGenome.end();
+            bool matched = child.synapseGenome.contains(otherGene.first);
             if (matched)
             {
                 // decide whether to flip
@@ -74,38 +74,38 @@ struct Genome
                 child.synapseGenome.insert(otherGene);
             }
         }
-
         return child;
     }
 
     // mutations
-    inline void add_new_synapse(const unsigned _startingNeuronID, const unsigned _endingNeuronID)
-    {
-        SynapseGene newGene(_startingNeuronID, _endingNeuronID);
-        synapseGenome.push_back(newGene);
-    }
-    inline void change_weight(const unsigned _indexOfSynapseToEvolve)
-    {
-        synapseGenome.at(_indexOfSynapseToEvolve).change_weight();
-    }
-    void evolve_a_synapse(const unsigned _indexOfSynapseToEvolve, const unsigned _newNeuronsID)
-    {
-        auto &geneToEvolve = synapseGenome.at(_indexOfSynapseToEvolve);
-        geneToEvolve.enabled = false;
+public:
+    // inline void add_new_synapse(const unsigned _startingNeuronID, const unsigned _endingNeuronID)
+    // {
+    //     SynapseGene newGene(_startingNeuronID, _endingNeuronID);
+    //     synapseGenome.push_back(newGene);
+    // }
+    // inline void change_weight(const unsigned _indexOfSynapseToEvolve)
+    // {
+    //     synapseGenome.at(_indexOfSynapseToEvolve).change_weight();
+    // }
+    // void evolve_a_synapse(const unsigned _indexOfSynapseToEvolve, const unsigned _newNeuronsID)
+    // {
+    //     auto &geneToEvolve = synapseGenome.at(_indexOfSynapseToEvolve);
+    //     geneToEvolve.enabled = false;
 
-        auto startingNeuronID = geneToEvolve.startingNeuronID;
-        auto endingNeuronID = geneToEvolve.endingNeuronID;
+    //     auto startingNeuronID = geneToEvolve.startingNeuronID;
+    //     auto endingNeuronID = geneToEvolve.endingNeuronID;
 
-        // neuron we are adding
-        auto newEndingNeuronID = _newNeuronsID;
-        auto newStartingNeuronID = _newNeuronsID;
+    //     // neuron we are adding
+    //     auto newEndingNeuronID = _newNeuronsID;
+    //     auto newStartingNeuronID = _newNeuronsID;
 
-        SynapseGene newGene1(startingNeuronID, newEndingNeuronID);
-        SynapseGene newGene2(newStartingNeuronID, endingNeuronID);
+    //     SynapseGene newGene1(startingNeuronID, newEndingNeuronID);
+    //     SynapseGene newGene2(newStartingNeuronID, endingNeuronID);
 
-        synapseGenome.push_back(newGene1);
-        synapseGenome.push_back(newGene2);
-    }
+    //     synapseGenome.push_back(newGene1);
+    //     synapseGenome.push_back(newGene2);
+    // }
 };
 
 // typedefs

@@ -1,16 +1,15 @@
 #pragma once
-#include "Neuron.hpp"
+#include <map>
 #include "Gene.hpp"
+#include <vector>
+#include <utility>
 #include "Network.hpp"
 #include <algorithm>
-#include <cmath>
 
 // test
 #include <fstream>
 #include <iostream>
-#include "E:/programming_tools/SFML-2.5.1/include/SFML/Graphics.hpp"
-
-#define MUTATION_PROBABILITY 0.1f
+// #include "E:/programming_tools/SFML-2.5.1/include/SFML/Graphics.hpp"
 
 // we dont need to think explicitly about bias neurons, NEAT will add them if necessary
 class NEAT
@@ -18,71 +17,63 @@ class NEAT
 private:
     // we need a container for all the neurons in the genePool sorted by their innovaion number
     // we need an std::vector because we need to access every neuron by its innovaion number which is index in this case
-    std::vector<NeuronGene> m_neuronGenePool;
+    GenePool m_genePool;
 
-    std::vector<Genome> m_synapseGenePool;
+    std::vector<Genome> m_individualGenomes;
 
-    const unsigned m_numberOfInputs, m_numberOfOutputs, population;
+    const unsigned m_numberOfInputs, m_numberOfOutputs, m_population;
+
+    const float MUTATION_PROBABILITY = 0.1f;
 
 public:
-    NEAT(const unsigned _numberOfInputs, const unsigned _numberOfOutputs, const unsigned _population) : m_numberOfInputs(_numberOfInputs), m_numberOfOutputs(_numberOfOutputs), population(_population)
+    NEAT(const unsigned _numberOfInputs, const unsigned _numberOfOutputs, const unsigned _population) : m_numberOfInputs(_numberOfInputs), m_numberOfOutputs(_numberOfOutputs), m_population(_population)
     {
-        // start by creating empty genomes in the genepool AND
+        // start by creating individuals in the genepool AND
         // fully connect the input to the output layer for each starting brain
         for (unsigned individualIndex = 0; individualIndex < _population; ++individualIndex)
         {
-            m_genePool.push_back(Genome());
+            m_individualGenomes.push_back(Genome());
 
-            for (unsigned inputIndex = 0; inputIndex < _numberOfInputs; ++inputIndex)
+            // push the obviously necessary neurons (input and output)
+            // INPUT LAYER
+            for (unsigned inputNeuronIndex = 0; inputNeuronIndex < _numberOfInputs; ++inputNeuronIndex)
             {
-                for (unsigned outputIndex = 0; outputIndex < _numberOfOutputs; ++outputIndex)
+                // make the (id, neuronType pair) and push it in the neuronPool
+                NeuronGene inputNeuronGene(inputNeuronIndex, SENSOR);
+                m_individualGenomes.back().neuronGenome.insert(inputNeuronGene);
+            }
+            // OUTPUT LAYER
+            for (unsigned outputNeuronIndex = 0; outputNeuronIndex < _numberOfOutputs; ++outputNeuronIndex)
+            {
+                // make the (id, neuronType pair) and push it in the neuronPool
+                NeuronGene outputNeuronGene(_numberOfInputs + outputNeuronIndex, MOTOR);
+                m_individualGenomes.back().neuronGenome.insert(outputNeuronGene);
+            }
+
+            // push all the synapses
+            for (unsigned inputNeuronIndex = 0; inputNeuronIndex < _numberOfInputs; ++inputNeuronIndex)
+            {
+                for (unsigned outputNeuronIndex = 0; outputNeuronIndex < _numberOfOutputs; ++outputNeuronIndex)
                 {
-                    SynapseGene synapseGene(inputIndex, _numberOfInputs + outputIndex);
-                    m_genePool.back().synapseGenome.push_back(synapseGene);
+                    InnovationID id(inputNeuronIndex, _numberOfInputs + outputNeuronIndex);
+                    SynapseProperties properties;
+                    SynapseGene gene(id, properties);
+                    m_individualGenomes.back().synapseGenome.insert(gene);
                 }
             }
         }
 
-        // push the obviously necessary neurons (input and output)
-        // INPUT LAYER
-        for (unsigned inputNeuronIndex = 0; inputNeuronIndex < _numberOfInputs; ++inputNeuronIndex)
-        {
-            // make the gene
-            NeuronGene neuronGene(SENSOR, 0u, inputNeuronIndex, m_neuronPool.size());
-
-            // make the neuron according to the gene and push it in the neuronPool
-            auto neuronPointer = new Neuron(neuronGene);
-            m_neuronPool.push_back(neuronPointer);
-
-            // add this gene to every genome in the starting population
-            for (auto &genome : m_genePool)
-            {
-                genome.neuronGenome.push_back(neuronGene);
-            }
-        }
-        // OUTPUT LAYER
-        for (unsigned outputNeuronIndex = 0; outputNeuronIndex < _numberOfInputs; ++outputNeuronIndex)
-        {
-            // make the gene
-            NeuronGene neuronGene(MOTOR, 1u, outputNeuronIndex, m_neuronPool.size());
-
-            // make the neuron according to the gene and push it in the neuronPool
-            auto neuronPointer = new Neuron(neuronGene);
-            m_neuronPool.push_back(neuronPointer);
-
-            // add this gene to every genome in the starting population
-            for (auto &genome : m_genePool)
-            {
-                genome.neuronGenome.push_back(neuronGene);
-            }
-        }
+        // keep a record of the starting genomes
+        m_genePool.neuronGenePool = m_individualGenomes.front().neuronGenome;
+        m_genePool.synapseGenePool = m_individualGenomes.front().synapseGenome;
     }
+
     void play_generation(void)
     {
-        for (auto &individualGenome : m_genePool)
+        for (auto &individualGenome : m_individualGenomes)
         {
-            individualGenome.score = 100;
-            Network individualBrain(m_neuronPool, individualGenome);
+            individualGenome.score = 1000;
+            Network individualBrain(individualGenome);
 
             // this is some test code , subject to change later
             std::ifstream file;
@@ -109,34 +100,32 @@ public:
                 else
                     label[1] = 1;
 
-                auto result = individualBrain.feed_forward(inputs);
-
                 auto error = individualBrain.calculate_error(label);
                 individualGenome.score -= error;
             }
         }
     }
-    void print_best_scorer(sf::RenderWindow &_window)
+    void print_best_scorer()
     {
         // sort the genomes in descending order of their scores
         auto less = [](const Genome &A, const Genome &B)
         {
             return A.score > B.score;
         };
-        std::sort(m_genePool.begin(), m_genePool.end(), less);
+        std::sort(m_individualGenomes.begin(), m_individualGenomes.end(), less);
 
-        auto &bestGenome = m_genePool.front();
+        auto &bestGenome = m_individualGenomes.front();
         std::cout << "score: " << bestGenome.score << '\n';
 
         // show the network of best performer
-        for (auto &gene : bestGenome.synapseGenome)
+        for (const auto &gene : bestGenome.synapseGenome)
         {
             std::cout << '\n'
-                      << gene.startingNeuronID << ' ' << gene.endingNeuronID << ' ' << gene.weight;
+                      << gene.first.startingNeuronID << ' ' << gene.first.endingNeuronID << ' ' << gene.second.weight;
         }
 
-        Network bestNetwork(m_neuronPool, bestGenome);
-        bestNetwork.draw(_window);
+        // Network bestNetwork(m_neuronPool, bestGenome);
+        // bestNetwork.draw(_window);
 
         // show the total neuronPool
         // for (auto &neuron : m_neuronPool)
@@ -147,87 +136,99 @@ public:
     }
     void mutate(Genome &_genome)
     {
-        // choose what mutation to do (weighted probaility distribution) now it is 10 80 5 5
-        auto randomByte = random_U8.generate();
+        // choose what mutation to do (weighted probaility distribution) now it is 10 10 80
+        auto randomUnsigned = random_U32.generate();
 
-        Network network(m_neuronPool, _genome);
-        const auto &net = network.neuralNetwork;
-        if (randomByte < UINT8_MAX * 0.1)
+        if (randomUnsigned < UINT32_MAX * 0.1)
         {
-            // add a new synapse (from a preceding layer to a following layer/ no feedback)
+            // add a new synapse
 
-            // input or one of the hidden layers
-            auto randomStartingLayerIndex = random_U32.generate(0, net.size() - 2);
-            auto randomStartingNeuronIndex = random_U32.generate(0, net.at(randomStartingLayerIndex).size() - 1);
-            auto randomStartingNeuronID = net.at(randomStartingLayerIndex).at(randomStartingNeuronIndex)->ID;
-
-            // one of the hidden layers or output layer
-            auto randomEndingLayerIndex = random_U32.generate(randomStartingLayerIndex + 1, net.size() - 1);
-            auto randomEndingNeuronIndex = random_U32.generate(0, net.at(randomEndingLayerIndex).size() - 1);
-            auto randomEndingNeuronID = net.at(randomEndingLayerIndex).at(randomEndingNeuronIndex)->ID;
-
-            // check if the connection already exists, then only change its weight
-            auto innovationNumber = power(2, randomStartingNeuronID) * power(3, randomEndingNeuronID);
-            for (auto &synapseGene : _genome.synapseGenome)
+            // make a list of available neuron ids to choose from
+            std::vector<ID> availableIDs;
+            for (const auto &gene : _genome.neuronGenome)
             {
-                if (synapseGene.innovation_number() == innovationNumber)
-                {
-                    synapseGene.change_weight();
-                    return;
-                }
+                availableIDs.push_back(gene.first);
             }
+            const auto startingIndex = random_U32.generate(0, availableIDs.size() - 1);
+            const auto startingNeuronID = availableIDs.at(startingIndex);
 
-            // if the synapse does not exist then add it
-            _genome.add_new_synapse(randomStartingNeuronID, randomEndingNeuronID);
+            const auto endingIndex = random_U32.generate(0, availableIDs.size() - 1);
+            const auto endingNeuronID = availableIDs.at(endingIndex);
+
+            InnovationID newInnovationID(startingNeuronID, endingNeuronID);
+            SynapseProperties properties;
+
+            // check if the synapse already exists
+            bool alreadyExists = _genome.synapseGenome.contains(newInnovationID);
+            if (alreadyExists)
+            {
+                // give it the new random weight and possibly enable it (if not already enabled)
+                _genome.synapseGenome.at(newInnovationID) = properties;
+            }
+            else
+            {
+                SynapseGene newSynapseGene(newInnovationID, properties);
+                _genome.synapseGenome.insert(newSynapseGene);
+
+                // also add this new innovation to the genepool if not already there
+                if (not m_genePool.synapseGenePool.contains(newInnovationID))
+                    m_genePool.synapseGenePool.insert(newSynapseGene);
+            }
         }
-        else if (randomByte >= UINT8_MAX * 0.1 and randomByte < UINT8_MAX * 0.9)
-        { // change the weight of a random synapse
-            // choose which one to mutate
-            auto randomSyanpseIndex = random_U32.generate(0, _genome.synapseGenome.size() - 1);
-            _genome.change_weight(randomSyanpseIndex);
-        }
-        else if (randomByte >= UINT8_MAX * 0.9 and randomByte < UINT8_MAX )
+        else if (randomUnsigned >= UINT32_MAX * 0.1 and randomUnsigned < UINT32_MAX * 0.2)
         {
             // evolve a synapse (add a neuron in the middle of it)
             // choose which synapse to evolve
-            auto randomSynapseIndex = random_U32.generate(0, _genome.synapseGenome.size() - 1);
-            auto newLayerIndex = m_neuronPool.at(_genome.synapseGenome.at(randomSynapseIndex).startingNeuronID)->layerIndex + 1;
-
-            // check if the layer already exists
-            bool layerAlreadyExists = net.size() > newLayerIndex + 1u;
-            unsigned newNeuronIndex = 0;
-            if (layerAlreadyExists)
-                newNeuronIndex = net.at(newLayerIndex).size();
-
-            // add the neuron to the pool of neurons
-            auto newNeuronID = m_neuronPool.size();
-            NeuronGene neuronGene(HIDDEN, newLayerIndex, newNeuronIndex, newNeuronID);
-            auto newNeuronPointer = new Neuron(neuronGene);
-            m_neuronPool.push_back(newNeuronPointer);
-
-            _genome.evolve_a_synapse(randomSynapseIndex, newNeuronID);
-        }
-        else if (randomByte >= UINT8_MAX * 0.95 and randomByte < UINT8_MAX)
-        {
-            // add a random bias type neuron in
-            // input or one of the hidden layers
-            auto randomStartingLayerIndex = random_U32.generate(0, net.size() - 2);
-            auto nextLayerIndex = randomStartingLayerIndex + 1u;
-
-            // add the neuron to the pool of neurons
-            auto newNeuronID = m_neuronPool.size();
-            NeuronGene neuronGene(BIAS, randomStartingLayerIndex, net.at(randomStartingLayerIndex).size(), newNeuronID);
-            auto newNeuronPointer = new Neuron(neuronGene);
-            m_neuronPool.push_back(newNeuronPointer);
-
-            // add all synapses from it to all the neurons in the next layer
-            for (auto &nextLayerNeuron : net.at(nextLayerIndex))
+            std::vector<InnovationID> availableInnnovationIDs;
+            for (const auto &gene : _genome.synapseGenome)
             {
-                auto endingNeuronID = nextLayerNeuron->ID;
-                SynapseGene newGene(newNeuronID, endingNeuronID);
-
-                _genome.synapseGenome.push_back(newGene);
+                availableInnnovationIDs.push_back(gene.first);
             }
+
+            auto randomIndex = random_U32.generate(0, availableInnnovationIDs.size() - 1);
+            auto oldInnovationID = availableInnnovationIDs.at(randomIndex);
+
+            // disable it in both containers
+            _genome.synapseGenome.at(oldInnovationID).enabled = false;
+            m_genePool.synapseGenePool.at(oldInnovationID).enabled = false;
+
+            // make a new neuron gene
+            auto newNeuronID = m_genePool.neuronGenePool.size();
+            NeuronGene neuronGene(newNeuronID, HIDDEN);
+            // add it to both containers
+            _genome.neuronGenome.insert(neuronGene);
+            m_genePool.neuronGenePool.insert(neuronGene);
+
+            // make two new synapse genes
+            InnovationID newInnovationID1(oldInnovationID.startingNeuronID, newNeuronID);
+            SynapseProperties properties1;
+            SynapseGene synapseGene1(newInnovationID1, properties1);
+
+            InnovationID newInnovationID2(newNeuronID, oldInnovationID.endingNeuronID);
+            SynapseProperties properties2;
+            SynapseGene synapseGene2(newInnovationID2, properties2);
+
+            // push them in both containers
+            _genome.synapseGenome.insert(synapseGene1);
+            _genome.synapseGenome.insert(synapseGene2);
+            m_genePool.synapseGenePool.insert(synapseGene1);
+            m_genePool.synapseGenePool.insert(synapseGene2);
+        }
+
+        else if (randomUnsigned >= UINT32_MAX * 0.2 and randomUnsigned < UINT32_MAX)
+        {
+            // change the weight of a random synapse
+            // choose which one to mutate
+            std::vector<InnovationID> availableInnnovationIDs;
+            for (const auto &gene : _genome.synapseGenome)
+            {
+                availableInnnovationIDs.push_back(gene.first);
+            }
+            auto randomIndex = random_U32.generate(0, availableInnnovationIDs.size() - 1);
+            auto innovationID = availableInnnovationIDs.at(randomIndex);
+
+            SynapseProperties properties;
+            _genome.synapseGenome.at(innovationID) = properties;
         }
     }
     void repopulate(void)
@@ -237,32 +238,38 @@ public:
         {
             return A.score > B.score;
         };
-        std::sort(m_genePool.begin(), m_genePool.end(), less);
+        std::sort(m_individualGenomes.begin(), m_individualGenomes.end(), less);
 
-        // select the best sqrt(population) number of individuals to repopulate
+        // select the best m_population/2 number of individuals to repopulate
         std::vector<Genome> selectedGenomes;
-        for (unsigned individualIndex = 0; individualIndex < sqrt(population); ++individualIndex)
+        for (unsigned individualIndex = 0; individualIndex < m_population / 2; ++individualIndex)
         {
-            selectedGenomes.push_back(m_genePool.at(individualIndex));
+            selectedGenomes.push_back(m_individualGenomes.at(individualIndex));
         }
 
-        // cross the genomes with each other to again produce population number of individuals
-        m_genePool.clear();
-        for (auto &father : selectedGenomes)
+        // cross the genomes with each other to again produce m_population number of individuals
+        m_individualGenomes.clear();
+        for (unsigned index = 0; index < selectedGenomes.size(); index += 2)
         {
-            for (auto &mother : selectedGenomes)
-            {
-                auto child = father.cross(mother);
+            auto &father = selectedGenomes.at(index);
+            auto &mother = selectedGenomes.at(index + 1);
 
-                // decide whether to mutate
-                auto randomUnsigned = random_U32.generate();
-                bool whetherToMutate = randomUnsigned < UINT32_MAX * MUTATION_PROBABILITY;
+            auto child1 = father.cross(mother);
+            auto child2 = mother.cross(father);
 
-                if (whetherToMutate)
-                    mutate(child);
+            // decide whether to mutate
+            auto randomUnsigned1 = random_U32.generate();
+            bool whetherToMutate1 = randomUnsigned < UINT32_MAX * MUTATION_PROBABILITY;
+            if (whetherToMutate1)
+                mutate(child1);
 
-                m_genePool.push_back(child);
-            }
+            auto randomUnsigned2 = random_U32.generate();
+            bool whetherToMutate2 = randomUnsigned < UINT32_MAX * MUTATION_PROBABILITY;
+            if (whetherToMutate2)
+                mutate(child2);
+
+            m_individualGenomes.push_back(child1);
+            m_individualGenomes.push_back(child2);
         }
     }
 };
