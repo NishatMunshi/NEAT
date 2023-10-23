@@ -3,6 +3,7 @@
 #include "E:/Code/custom_libraries/randomNumberGenerator.hpp"
 #include "E:/Code/custom_libraries/math.hpp"
 #include "Neuron.hpp"
+#include <unordered_map>
 
 enum NeuronType : uint8_t
 {
@@ -23,8 +24,9 @@ struct SynapseGene
     float weight;
     bool enabled;
 
-    static unsigned innovation;
-    SynapseGene(const unsigned _startingNeuronID, const unsigned _endingNeuronID) : startingNeuronID(_startingNeuronID), endingNeuronID(_endingNeuronID)
+    unsigned innovationNumber;
+
+    SynapseGene(const unsigned _startingNeuronID, const unsigned _endingNeuronID, const unsigned _innovationNumber) : startingNeuronID(_startingNeuronID), endingNeuronID(_endingNeuronID), innovationNumber(_innovationNumber)
     {
         // generate a random weight between -1 and 1
         auto randomFloat = (float)random_16.generate() / INT16_MIN;
@@ -33,10 +35,8 @@ struct SynapseGene
         // each new synapseGene starts enabled
         enabled = true;
 
-        ++innovation;
+        ++innovationNumber;
     }
-
-    inline unsigned innovation_number(void) const { return innovation; }
 
     inline void change_weight(void)
     {
@@ -45,11 +45,9 @@ struct SynapseGene
     }
 };
 
-unsigned SynapseGene::innovation = 0;
-
 struct Genome
 {
-    std::vector<SynapseGene> synapseGenome;
+    std::map<unsigned, SynapseGene> synapseGenome;
 
     float score = 0; // denotes how well this brain performed
 
@@ -61,24 +59,20 @@ struct Genome
         for (auto &otherGene : _other.synapseGenome)
         {
             bool matched = false;
-            for (auto &thisGene : child.synapseGenome)
+
+            // keep a record whether we matched this gene
+            matched = child.synapseGenome.find(otherGene.first) not_eq child.synapseGenome.end();
+            if (matched)
             {
-                // keep a record whether we matched this gene
-                matched = thisGene.innovation_number() == otherGene.innovation_number();
-                if (matched)
-                {
-
-                    // decide whether to flip
-                    bool flip = random_bool.generate();
-                    if (flip)
-                        thisGene = otherGene;
-
-                    break;
-                }
+                // decide whether to flip
+                bool flip = random_bool.generate();
+                if (flip)
+                    child.synapseGenome.at(otherGene.first) = otherGene.second;
             }
-            // if otherGene's innovationNumber is different, it means it is a new Gene and therefore it must be pushed into child's genome
-            if (not matched)
-                child.synapseGenome.push_back(otherGene);
+            else
+            {
+                child.synapseGenome.insert(otherGene);
+            }
         }
 
         return child;

@@ -1,10 +1,10 @@
 #pragma once
 #include <vector>
 #include "Neuron.hpp"
-#include "E:/Code/custom_libraries/list.hpp"
 #include "Gene.hpp"
 #include <set>
 #include <map>
+#include <cassert>
 
 // TEST
 #include "E:/programming_tools/SFML-2.5.1/include/SFML/Graphics.hpp"
@@ -14,7 +14,7 @@ struct Network
 {
 public:
     typedef std::vector<Neuron *> Layer; // we may need to add a new neuron but that can be pushed from the back
-    myLib::list<Layer> neuralNetwork;    // we may need to insert a new layer in the middle, so we use list
+    std::vector<Layer> neuralNetwork;    // we may need to insert a new layer in the middle, so we use list
 
     std::map<unsigned, Neuron *> IDtoPointerMap;
 
@@ -23,19 +23,19 @@ public:
     Network(const std::vector<NeuronGene> &_neuronGenePool, const Genome &_genome)
     {
         // push the number of layers needed (three - input, hidden, output)
-        neuralNetwork.push_front(Layer()); // input
-        neuralNetwork.push_back(Layer());  // hidden
-        neuralNetwork.push_back(Layer());  // output
+        neuralNetwork.push_back(Layer()); // input
+        neuralNetwork.push_back(Layer()); // hidden
+        neuralNetwork.push_back(Layer()); // output
 
         // find which neurons are needed for this genome
         std::set<unsigned> neededNeuronIDs;
-        for (auto &gene : _genome.synapseGenome)
+        for (const auto &gene : _genome.synapseGenome)
         {
             neededNeuronIDs.insert(gene.startingNeuronID);
             neededNeuronIDs.insert(gene.endingNeuronID);
         }
 
-        for (auto &neededNeuronID : neededNeuronIDs)
+        for (const auto &neededNeuronID : neededNeuronIDs)
         {
             auto &neuronGene = _neuronGenePool.at(neededNeuronID);
             auto type = neuronGene.type;
@@ -71,7 +71,7 @@ public:
         }
 
         // add the new synapses
-        for (auto &synapseGene : _genome.synapseGenome)
+        for (const auto &synapseGene : _genome.synapseGenome)
         {
             auto startingNeuronPointer = IDtoPointerMap[synapseGene.startingNeuronID];
             auto endingNeuronPointer = IDtoPointerMap[synapseGene.endingNeuronID];
@@ -81,6 +81,8 @@ public:
 
     unsigned feed_forward(const std::vector<float> &_inputs)
     {
+        assert(_inputs.size() == neuralNetwork.front().size());
+
         // feed the inputs in
         for (unsigned neuronIndex = 0; neuronIndex < neuralNetwork.front().size(); ++neuronIndex)
         {
@@ -88,9 +90,8 @@ public:
         }
 
         // feed through the whole network
-        for (unsigned layerIndex = 0; layerIndex < neuralNetwork.size(); ++layerIndex)
+        for (auto &layer : neuralNetwork)
         {
-            auto &layer = neuralNetwork.at(layerIndex);
             for (auto &neuronPointer : layer)
             {
                 neuronPointer->feed_forward();
@@ -104,7 +105,8 @@ public:
     }
 
     // test
-    float calculate_error(const std::vector<float> &_label)
+    float
+    calculate_error(const std::vector<float> &_label)
     {
         float error = 0;
         for (unsigned index = 0; index < _label.size(); ++index)
