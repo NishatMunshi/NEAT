@@ -1,82 +1,98 @@
 #pragma once
 #include <vector>
 #include "Neuron.hpp"
+#include "E:/Code/custom_libraries/list.hpp"
 #include "Gene.hpp"
-#include <algorithm>
+#include <list>
+#include <map>
 
-// remember to check later if we really need those std::sorts
-class Network
+// TEST
+#include "E:/programming_tools/SFML-2.5.1/include/SFML/Graphics.hpp"
+#define WINDOW_DIMENSION 900
+struct Network
 {
-private:
-    // we need a container for all the neurons sorted by their innovaion number
-    // we need an std::vector because we need to access every neuron by its innovaion number which is index in this case
-    std::vector<Neuron *> m_neuronPool;
-
-private:
-    typedef std::vector<Neuron *> Layer; // we may need to add a new neuron but that can be pushed from the back
-    std::vector<Layer> m_neuralNetwork;  // we may need to insert a new layer in the middle, so we use list
 
 public:
-    // construct the net according to the genome passed as argument
-    Network(const Genome &_genome)
+    typedef std::vector<Neuron *> Layer; // we may need to add a new neuron but that can be pushed from the back
+    myLib::list<Layer> neuralNetwork;    // we may need to insert a new layer in the middle, so we use list
+
+    std::map<unsigned, Neuron *> IDtoPointerMap;
+
+public:
+    // construct the net by arranging the layers
+    Network(const std::vector<NeuronGene> &_neuronGenePool, const Genome &_genome)
     {
-        // first make all the neurons needed
-        for (auto &gene : _genome.neuronGenome)
+        // push the number of layers needed (three - input, hidden, output)
+        neuralNetwork.push_front(Layer()); // input
+        neuralNetwork.push_back(Layer());  // hidden
+        neuralNetwork.push_back(Layer());  // output
+
+        // find which neurons are needed for this genome
+        std::list<unsigned> neededNeuronIDs;
+        for (auto &gene : _genome.synapseGenome)
         {
-            m_neuronPool.push_back(new Neuron(gene));
+            neededNeuronIDs.push_back(gene.startingNeuronID);
+            neededNeuronIDs.push_back(gene.endingNeuronID);
         }
-        // sort them in ascending order of innovation number
-        std::sort(m_neuronPool.begin(), m_neuronPool.end(), [](const Neuron *A, const Neuron *B)
-                  { return A->innovationNumber < B->innovationNumber; });
+        neededNeuronIDs.sort();
+        neededNeuronIDs.unique();
 
-        // find out how many layers are needed
-        const auto neuronPointer = *std::max_element(m_neuronPool.begin(), m_neuronPool.end(), [](const Neuron *A, const Neuron *B)
-                                                     { return A->layerIndex > B->layerIndex; });
-        const unsigned numberOfLayers = neuronPointer->layerIndex + 1;
-
-        // Now start constructing the neuralNetwork
-        // push the number of layers needed
-        for (unsigned index = 0; index < numberOfLayers; ++index)
-            m_neuralNetwork.push_back(Layer());
-
-        // fill the network with neurons from the neuronPool
-        for (auto &neuronPointer : m_neuronPool)
+        for (auto &neededNeuronID : neededNeuronIDs)
         {
-            if (neuronPointer->type == SENSOR)
-                m_neuralNetwork.front().push_back(neuronPointer);
-            else if (neuronPointer->type == MOTOR)
-                m_neuralNetwork.back().push_back(neuronPointer);
-            else if (neuronPointer->type == HIDDEN)
+            auto &neuronGene = _neuronGenePool.at(neededNeuronID);
+            auto type = neuronGene.type;
+
+            if (type == SENSOR)
             {
-                m_neuralNetwork.at(neuronPointer->layerIndex).push_back(neuronPointer);
+                auto neuronIndex = neuralNetwork.front().size();
+                auto newNeuronPointer = new Neuron(type, neuronIndex);
+                neuralNetwork.front().push_back(newNeuronPointer);
+
+                // keep a record of it in the map
+                IDtoPointerMap.insert(std::pair(neededNeuronID, newNeuronPointer));
+            }
+            else if (type == HIDDEN)
+            {
+
+                auto neuronIndex = neuralNetwork.at(1).size();
+                auto newNeuronPointer = new Neuron(type, neuronIndex);
+                neuralNetwork.at(1).push_back(newNeuronPointer);
+
+                // keep a record of it in the map
+                IDtoPointerMap.insert(std::pair(neededNeuronID, newNeuronPointer));
+            }
+            else if (type == MOTOR)
+            {
+                auto neuronIndex = neuralNetwork.back().size();
+                auto newNeuronPointer = new Neuron(type, neuronIndex);
+                neuralNetwork.back().push_back(newNeuronPointer);
+
+                // keep a record of it in the map
+                IDtoPointerMap.insert(std::pair(neededNeuronID, newNeuronPointer));
             }
         }
 
-        // sort the input layer and output layer
-        std::sort(m_neuralNetwork.front().begin(), m_neuralNetwork.front().end(), [](const Neuron *A, const Neuron *B)
-                  { return A->neuronIndex < B->neuronIndex; });
-        std::sort(m_neuralNetwork.back().begin(), m_neuralNetwork.back().end(), [](const Neuron *A, const Neuron *B)
-                  { return A->neuronIndex < B->neuronIndex; });
-
-        // add the synapses to their respective parent neurons
-        for (auto &gene : _genome.synapseGenome)
+        // add the new synapses
+        for (auto &synapseGene : _genome.synapseGenome)
         {
-            auto endingNeuronPointer = m_neuronPool.at(gene.endingNeuronID);
-            m_neuronPool.at(gene.startingNeuronID)->add_output_synapse(gene, endingNeuronPointer);
+            auto startingNeuronPointer = IDtoPointerMap[synapseGene.startingNeuronID];
+            auto endingNeuronPointer = IDtoPointerMap[synapseGene.endingNeuronID];
+            startingNeuronPointer->add_output_synapse(synapseGene, endingNeuronPointer);
         }
     }
 
     unsigned feed_forward(const std::vector<float> &_inputs)
     {
         // feed the inputs in
-        for (unsigned neuronIndex = 0; neuronIndex < m_neuralNetwork.front().size(); ++neuronIndex)
+        for (unsigned neuronIndex = 0; neuronIndex < neuralNetwork.front().size(); ++neuronIndex)
         {
-            m_neuralNetwork.front().at(neuronIndex)->input = _inputs.at(neuronIndex);
+            neuralNetwork.front().at(neuronIndex)->set_input(_inputs.at(neuronIndex));
         }
 
         // feed through the whole network
-        for (auto &layer : m_neuralNetwork)
+        for (unsigned layerIndex = 0; layerIndex < neuralNetwork.size(); ++layerIndex)
         {
+            auto &layer = neuralNetwork.at(layerIndex);
             for (auto &neuronPointer : layer)
             {
                 neuronPointer->feed_forward();
@@ -84,16 +100,72 @@ public:
         }
 
         // look at the final outputs and determine which one is the largest and return its index
-        auto iterator = std::max_element(m_neuralNetwork.back().begin(), m_neuralNetwork.back().end(), [](const Neuron *A, const Neuron *B)
-                                         { return A->get_output() > B->get_output(); });
-        return iterator - m_neuralNetwork.back().begin();
+        auto iterator = std::max_element(neuralNetwork.back().begin(), neuralNetwork.back().end(), [](const Neuron *A, const Neuron *B)
+                                         { return A->get_output() < B->get_output(); });
+        return iterator - neuralNetwork.back().begin();
+    }
+
+    // test
+    float calculate_error(const std::vector<float> &_label)
+    {
+        float error = 0;
+        for (unsigned index = 0; index < _label.size(); ++index)
+        {
+            auto err = neuralNetwork.back().at(index)->get_output() - _label.at(index);
+            err *= err;
+            error += err;
+        }
+        return error;
     }
 
 public:
-    ~Network(void)
+    ~Network(void) noexcept
     {
-        for (auto &neuronPointer : m_neuronPool)
+        for (const auto &[ID, neuronPointer] : IDtoPointerMap)
             neuronPointer->~Neuron();
-        delete this;
+    }
+
+    // graphics
+public:
+    void draw(sf::RenderWindow &_window)
+    {
+        // find out how many layers there are which we have to account for
+        auto numberOfLayers = neuralNetwork.size();
+        float widthOfVerticalDivision = WINDOW_DIMENSION / (numberOfLayers + 1);
+
+        for (unsigned layerIndex = 0; layerIndex < numberOfLayers - 1; ++layerIndex)
+        {
+            auto &thisLayer = neuralNetwork.at(layerIndex);
+            auto &nextLayer = neuralNetwork.at(layerIndex + 1);
+
+            auto thisPosX = widthOfVerticalDivision + widthOfVerticalDivision * layerIndex;
+            auto nextPosX = widthOfVerticalDivision + thisPosX;
+
+            // find out how many neurons there are which we have to account for
+            auto numNeuronsInThisLayer = thisLayer.size();
+            auto numNeuronsInNextLayer = nextLayer.size();
+
+            float thisHorizontalDivisonWidth = WINDOW_DIMENSION / (numNeuronsInThisLayer + 1);
+            float nextHorizontalDivisonWidth = WINDOW_DIMENSION / (numNeuronsInNextLayer + 1);
+
+            for (auto &neuronPointer : thisLayer)
+            {
+                neuronPointer->draw(_window, thisPosX, thisHorizontalDivisonWidth, nextPosX, nextHorizontalDivisonWidth);
+            }
+        }
+        // last layer
+        auto &thisLayer = neuralNetwork.back();
+
+        auto thisPosX = widthOfVerticalDivision + widthOfVerticalDivision * (neuralNetwork.size() - 1);
+
+        // find out how many neurons there are which we have to account for
+        auto numNeuronsInThisLayer = thisLayer.size();
+
+        float thisHorizontalDivisonWidth = WINDOW_DIMENSION / (numNeuronsInThisLayer + 1);
+
+        for (auto &neuronPointer : thisLayer)
+        {
+            neuronPointer->draw(_window, thisPosX, thisHorizontalDivisonWidth, 0, 0);
+        }
     }
 };
