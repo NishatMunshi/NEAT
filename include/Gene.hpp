@@ -1,8 +1,6 @@
 #pragma once
-#include <cstdint>
-#include <utility>
 #include <map>
-#include "randomNumberGenerator.hpp"
+#include "../libraries/randomNumberGenerator.hpp"
 #include <unordered_map>
 
 typedef unsigned ID;
@@ -21,9 +19,23 @@ struct InnovationID
     unsigned endingNeuronID;
 
     InnovationID(const unsigned _startingNeuronID, const unsigned _endingNeuronID) : startingNeuronID(_startingNeuronID), endingNeuronID(_endingNeuronID) {}
-    InnovationID(void) : startingNeuronID(0u) , endingNeuronID(0u) {}
+    InnovationID(void) : startingNeuronID(0u), endingNeuronID(0u) {}
 
-}; // startingNeuronID, endingNeuronID
+    inline bool operator==(const InnovationID &_other) const
+    {
+        return this->startingNeuronID == _other.startingNeuronID and this->endingNeuronID == _other.endingNeuronID;
+    }
+};
+
+// custom hash function for innovationID
+template <>
+struct std::hash<InnovationID>
+{
+    inline std::size_t operator()(const InnovationID &_id) const
+    {
+        return ((std::hash<unsigned>()(_id.startingNeuronID) xor (std::hash<unsigned>()(_id.endingNeuronID) << 1)) >> 1);
+    }
+};
 struct SynapseProperties
 {
     float weight;
@@ -37,6 +49,8 @@ struct SynapseProperties
         enabled = true;
     }
 };
+
+
 typedef std::pair<InnovationID, SynapseProperties> SynapseGene;
 typedef std::unordered_map<InnovationID, SynapseProperties> SynapseGenome;
 struct GenePool

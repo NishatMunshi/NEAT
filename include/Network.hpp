@@ -1,7 +1,7 @@
 #pragma once
 #include "Neuron.hpp"
 #include <cassert>
-#include<algorithm>
+#include <algorithm>
 
 // TEST
 // #include "E:/programming_tools/SFML-2.5.1/include/SFML/Graphics.hpp"
@@ -115,46 +115,46 @@ public:
     }
 
     // graphics
-// public:
-//     void draw(sf::RenderWindow &_window)
-//     {
-//         // find out how many layers there are which we have to account for
-//         auto numberOfLayers = m_neuralNetwork.size();
-//         float widthOfVerticalDivision = WINDOW_DIMENSION / (numberOfLayers + 1);
+    // public:
+    //     void draw(sf::RenderWindow &_window)
+    //     {
+    //         // find out how many layers there are which we have to account for
+    //         auto numberOfLayers = m_neuralNetwork.size();
+    //         float widthOfVerticalDivision = WINDOW_DIMENSION / (numberOfLayers + 1);
 
-//         for (unsigned layerIndex = 0; layerIndex < numberOfLayers - 1; ++layerIndex)
-//         {
-//             auto &thisLayer = m_neuralNetwork.at(layerIndex);
-//             auto &nextLayer = m_neuralNetwork.at(layerIndex + 1);
+    //         for (unsigned layerIndex = 0; layerIndex < numberOfLayers - 1; ++layerIndex)
+    //         {
+    //             auto &thisLayer = m_neuralNetwork.at(layerIndex);
+    //             auto &nextLayer = m_neuralNetwork.at(layerIndex + 1);
 
-//             auto thisPosX = widthOfVerticalDivision + widthOfVerticalDivision * layerIndex;
-//             auto nextPosX = widthOfVerticalDivision + thisPosX;
+    //             auto thisPosX = widthOfVerticalDivision + widthOfVerticalDivision * layerIndex;
+    //             auto nextPosX = widthOfVerticalDivision + thisPosX;
 
-//             // find out how many neurons there are which we have to account for
-//             auto numNeuronsInThisLayer = thisLayer.size();
-//             auto numNeuronsInNextLayer = nextLayer.size();
+    //             // find out how many neurons there are which we have to account for
+    //             auto numNeuronsInThisLayer = thisLayer.size();
+    //             auto numNeuronsInNextLayer = nextLayer.size();
 
-//             float thisHorizontalDivisonWidth = WINDOW_DIMENSION / (numNeuronsInThisLayer + 1);
-//             float nextHorizontalDivisonWidth = WINDOW_DIMENSION / (numNeuronsInNextLayer + 1);
+    //             float thisHorizontalDivisonWidth = WINDOW_DIMENSION / (numNeuronsInThisLayer + 1);
+    //             float nextHorizontalDivisonWidth = WINDOW_DIMENSION / (numNeuronsInNextLayer + 1);
 
-//             for (auto &neuronPointer : thisLayer)
-//             {
-//                 neuronPointer->draw(_window, thisPosX, thisHorizontalDivisonWidth, nextPosX, nextHorizontalDivisonWidth);
-//             }
-//         }
-//         // last layer
-//         auto &thisLayer = m_neuralNetwork.back();
+    //             for (auto &neuronPointer : thisLayer)
+    //             {
+    //                 neuronPointer->draw(_window, thisPosX, thisHorizontalDivisonWidth, nextPosX, nextHorizontalDivisonWidth);
+    //             }
+    //         }
+    //         // last layer
+    //         auto &thisLayer = m_neuralNetwork.back();
 
-//         auto thisPosX = widthOfVerticalDivision + widthOfVerticalDivision * (m_neuralNetwork.size() - 1);
+    //         auto thisPosX = widthOfVerticalDivision + widthOfVerticalDivision * (m_neuralNetwork.size() - 1);
 
-//         // find out how many neurons there are which we have to account for
-//         auto numNeuronsInThisLayer = thisLayer.size();
+    //         // find out how many neurons there are which we have to account for
+    //         auto numNeuronsInThisLayer = thisLayer.size();
 
-//         float thisHorizontalDivisonWidth = WINDOW_DIMENSION / (numNeuronsInThisLayer + 1);
+    //         float thisHorizontalDivisonWidth = WINDOW_DIMENSION / (numNeuronsInThisLayer + 1);
 
-//         for (auto &neuronPointer : thisLayer)
-//         {
-//             neuronPointer->draw(_window, thisPosX, thisHorizontalDivisonWidth, 0, 0);
-//         }
-//     }
+    //         for (auto &neuronPointer : thisLayer)
+    //         {
+    //             neuronPointer->draw(_window, thisPosX, thisHorizontalDivisonWidth, 0, 0);
+    //         }
+    //     }
 };
