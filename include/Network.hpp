@@ -1,10 +1,7 @@
 #pragma once
-#include <vector>
 #include "Neuron.hpp"
-#include <unordered_map>
-#include <map>
-#include "Gene.hpp"
 #include <cassert>
+#include<algorithm>
 
 // TEST
 // #include "E:/programming_tools/SFML-2.5.1/include/SFML/Graphics.hpp"

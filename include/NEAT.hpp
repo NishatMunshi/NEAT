@@ -1,17 +1,11 @@
 #pragma once
-#include <map>
-#include "Gene.hpp"
-#include <vector>
-#include <utility>
 #include "Network.hpp"
-#include <algorithm>
 
 // test
 #include <fstream>
 #include <iostream>
 // #include "E:/programming_tools/SFML-2.5.1/include/SFML/Graphics.hpp"
 
-// we dont need to think explicitly about bias neurons, NEAT will add them if necessary
 class NEAT
 {
 private:
@@ -159,7 +153,7 @@ public:
             SynapseProperties properties;
 
             // check if the synapse already exists
-            bool alreadyExists = _genome.synapseGenome.contains(newInnovationID);
+            bool alreadyExists = _genome.synapseGenome.count(newInnovationID);
             if (alreadyExists)
             {
                 // give it the new random weight and possibly enable it (if not already enabled)
@@ -171,7 +165,7 @@ public:
                 _genome.synapseGenome.insert(newSynapseGene);
 
                 // also add this new innovation to the genepool if not already there
-                if (not m_genePool.synapseGenePool.contains(newInnovationID))
+                if (not m_genePool.synapseGenePool.count(newInnovationID))
                     m_genePool.synapseGenePool.insert(newSynapseGene);
             }
         }
@@ -259,12 +253,12 @@ public:
 
             // decide whether to mutate
             auto randomUnsigned1 = random_U32.generate();
-            bool whetherToMutate1 = randomUnsigned < UINT32_MAX * MUTATION_PROBABILITY;
+            bool whetherToMutate1 = randomUnsigned1 < UINT32_MAX * MUTATION_PROBABILITY;
             if (whetherToMutate1)
                 mutate(child1);
 
             auto randomUnsigned2 = random_U32.generate();
-            bool whetherToMutate2 = randomUnsigned < UINT32_MAX * MUTATION_PROBABILITY;
+            bool whetherToMutate2 = randomUnsigned2 < UINT32_MAX * MUTATION_PROBABILITY;
             if (whetherToMutate2)
                 mutate(child2);
 

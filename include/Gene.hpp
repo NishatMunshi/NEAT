@@ -2,11 +2,8 @@
 #include <cstdint>
 #include <utility>
 #include <map>
-#include "E:/Code/custom_libraries/randomNumberGenerator.hpp"
-#include "E:/Code/custom_libraries/math.hpp"
-#include "Neuron.hpp"
+#include "randomNumberGenerator.hpp"
 #include <unordered_map>
-#include <set>
 
 typedef unsigned ID;
 enum NeuronType : uint8_t
@@ -24,6 +21,7 @@ struct InnovationID
     unsigned endingNeuronID;
 
     InnovationID(const unsigned _startingNeuronID, const unsigned _endingNeuronID) : startingNeuronID(_startingNeuronID), endingNeuronID(_endingNeuronID) {}
+    InnovationID(void) : startingNeuronID(0u) , endingNeuronID(0u) {}
 
 }; // startingNeuronID, endingNeuronID
 struct SynapseProperties
@@ -40,7 +38,7 @@ struct SynapseProperties
     }
 };
 typedef std::pair<InnovationID, SynapseProperties> SynapseGene;
-typedef std::map<InnovationID, SynapseProperties> SynapseGenome;
+typedef std::unordered_map<InnovationID, SynapseProperties> SynapseGenome;
 struct GenePool
 {
     NeuronGenome neuronGenePool;
@@ -52,7 +50,7 @@ struct Genome
     NeuronGenome neuronGenome;
     SynapseGenome synapseGenome;
 
-    float score = 0; // denotes how well this brain performed
+    float score; // denotes how well this brain performed
 
     Genome cross(const Genome &_other)
     {
@@ -61,7 +59,7 @@ struct Genome
         // loop through all the synapseGenes of _other and randomly flip some genes if flippable
         for (auto &otherGene : _other.synapseGenome)
         {
-            bool matched = child.synapseGenome.contains(otherGene.first);
+            bool matched = child.synapseGenome.count(otherGene.first);
             if (matched)
             {
                 // decide whether to flip
