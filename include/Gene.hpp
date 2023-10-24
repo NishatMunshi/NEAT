@@ -48,6 +48,10 @@ struct SynapseProperties
 
         enabled = true;
     }
+    SynapseProperties(const float _weight) : weight(_weight)
+    {
+        enabled = true;
+    }
 };
 
 

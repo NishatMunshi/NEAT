@@ -193,10 +193,10 @@ public:
 
             // make two new synapse genes
             InnovationID newInnovationID1(oldInnovationID.startingNeuronID, newNeuronID);
-            SynapseProperties properties1;
+            SynapseProperties properties1(_genome.synapseGenome.at(oldInnovationID).weight);
 
             InnovationID newInnovationID2(newNeuronID, oldInnovationID.endingNeuronID);
-            SynapseProperties properties2;
+            SynapseProperties properties2(1.f);
 
             // push them in both containers
             _genome.synapseGenome.insert_or_assign(newInnovationID1, properties1);
