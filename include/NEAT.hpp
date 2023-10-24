@@ -22,6 +22,7 @@ private:
 public:
     NEAT(const unsigned _numberOfInputs, const unsigned _numberOfOutputs, const unsigned _population) : m_numberOfInputs(_numberOfInputs), m_numberOfOutputs(_numberOfOutputs), m_population(_population)
     {
+        assert(_population % 4 == 0);
         // start by creating individuals in the genepool AND
         // fully connect the input to the output layer for each starting brain
         for (unsigned individualIndex = 0; individualIndex < _population; ++individualIndex)
@@ -94,6 +95,7 @@ public:
                 else
                     label[1] = 1;
 
+                individualBrain.feed_forward(inputs);
                 auto error = individualBrain.calculate_error(label);
                 individualGenome.score -= error;
             }
@@ -152,22 +154,9 @@ public:
             InnovationID newInnovationID(startingNeuronID, endingNeuronID);
             SynapseProperties properties;
 
-            // check if the synapse already exists
-            bool alreadyExists = _genome.synapseGenome.count(newInnovationID);
-            if (alreadyExists)
-            {
-                // give it the new random weight and possibly enable it (if not already enabled)
-                _genome.synapseGenome.at(newInnovationID) = properties;
-            }
-            else
-            {
-                SynapseGene newSynapseGene(newInnovationID, properties);
-                _genome.synapseGenome.insert(newSynapseGene);
-
-                // also add this new innovation to the genepool if not already there
-                if (not m_genePool.synapseGenePool.count(newInnovationID))
-                    m_genePool.synapseGenePool.insert(newSynapseGene);
-            }
+            // add it to both containers if not already there
+            _genome.synapseGenome.insert_or_assign(newInnovationID, properties);
+            m_genePool.synapseGenePool.insert_or_assign(newInnovationID, properties);
         }
         else if (randomUnsigned >= UINT32_MAX * 0.1 and randomUnsigned < UINT32_MAX * 0.2)
         {
@@ -188,25 +177,23 @@ public:
 
             // make a new neuron gene
             auto newNeuronID = m_genePool.neuronGenePool.size();
-            NeuronGene neuronGene(newNeuronID, HIDDEN);
+
             // add it to both containers
-            _genome.neuronGenome.insert(neuronGene);
-            m_genePool.neuronGenePool.insert(neuronGene);
+            _genome.neuronGenome.insert_or_assign(newNeuronID, HIDDEN);
+            m_genePool.neuronGenePool.insert_or_assign(newNeuronID, HIDDEN);
 
             // make two new synapse genes
             InnovationID newInnovationID1(oldInnovationID.startingNeuronID, newNeuronID);
             SynapseProperties properties1;
-            SynapseGene synapseGene1(newInnovationID1, properties1);
 
             InnovationID newInnovationID2(newNeuronID, oldInnovationID.endingNeuronID);
             SynapseProperties properties2;
-            SynapseGene synapseGene2(newInnovationID2, properties2);
 
             // push them in both containers
-            _genome.synapseGenome.insert(synapseGene1);
-            _genome.synapseGenome.insert(synapseGene2);
-            m_genePool.synapseGenePool.insert(synapseGene1);
-            m_genePool.synapseGenePool.insert(synapseGene2);
+            _genome.synapseGenome.insert_or_assign(newInnovationID1, properties1);
+            _genome.synapseGenome.insert_or_assign(newInnovationID2, properties2);
+            m_genePool.synapseGenePool.insert_or_assign(newInnovationID1, properties1);
+            m_genePool.synapseGenePool.insert_or_assign(newInnovationID2, properties2);
         }
 
         else if (randomUnsigned >= UINT32_MAX * 0.2 and randomUnsigned < UINT32_MAX)
@@ -248,22 +235,23 @@ public:
             auto &father = selectedGenomes.at(index);
             auto &mother = selectedGenomes.at(index + 1);
 
-            auto child1 = father.cross(mother);
-            auto child2 = mother.cross(father);
+            // each couple produces four children
+            Genome children[4];
+            bool whetherToMutate[4];
 
-            // decide whether to mutate
-            auto randomUnsigned1 = random_U32.generate();
-            bool whetherToMutate1 = randomUnsigned1 < UINT32_MAX * MUTATION_PROBABILITY;
-            if (whetherToMutate1)
-                mutate(child1);
+            for (unsigned childIndex = 0; childIndex < 4u; ++childIndex)
+            {
+                children[childIndex] = father.cross(mother);
 
-            auto randomUnsigned2 = random_U32.generate();
-            bool whetherToMutate2 = randomUnsigned2 < UINT32_MAX * MUTATION_PROBABILITY;
-            if (whetherToMutate2)
-                mutate(child2);
+                // decide whether to mutate this child
+                auto random = random_U32.generate();
+                whetherToMutate[childIndex] = random < UINT32_MAX * MUTATION_PROBABILITY;
+                if (whetherToMutate[childIndex])
+                    mutate(children[childIndex]);
 
-            m_individualGenomes.push_back(child1);
-            m_individualGenomes.push_back(child2);
+                //push the child to the m_individualGenePool
+                m_individualGenomes.push_back(children[childIndex]);
+            }
         }
     }
 };

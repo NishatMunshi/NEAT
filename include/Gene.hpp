@@ -69,9 +69,11 @@ struct Genome
     Genome cross(const Genome &_other)
     {
         Genome child = *this;
+        auto copyOfOtherNeuronGenome = _other.neuronGenome;
+        child.neuronGenome.merge(copyOfOtherNeuronGenome);
 
         // loop through all the synapseGenes of _other and randomly flip some genes if flippable
-        for (auto &otherGene : _other.synapseGenome)
+        for (const auto &otherGene : _other.synapseGenome)
         {
             bool matched = child.synapseGenome.count(otherGene.first);
             if (matched)

@@ -96,6 +96,7 @@ public:
     // test
     float calculate_error(const std::vector<float> &_label)
     {
+        assert(_label.size() == m_neuralNetwork.back().size());
         float error = 0;
         for (unsigned index = 0; index < _label.size(); ++index)
         {
