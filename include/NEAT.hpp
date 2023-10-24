@@ -68,6 +68,8 @@ public:
         for (auto &individualGenome : m_individualGenomes)
         {
             individualGenome.score = 1000;
+            individualGenome.numberOfCorrectAnswers = 0u;
+
             Network individualBrain(individualGenome);
 
             // this is some test code , subject to change later
@@ -95,7 +97,11 @@ public:
                 else
                     label[1] = 1;
 
-                individualBrain.feed_forward(inputs);
+                auto resultIndex = individualBrain.feed_forward(inputs);
+                if (resultIndex == std::max_element(label.begin(), label.end()) - label.begin())
+                {
+                    ++individualGenome.numberOfCorrectAnswers;
+                }
                 auto error = individualBrain.calculate_error(label);
                 individualGenome.score -= error;
             }
@@ -113,12 +119,15 @@ public:
         auto &bestGenome = m_individualGenomes.front();
         std::cout << "score: " << bestGenome.score << '\n';
 
+        std::cout << "number of neurons used: " << bestGenome.neuronGenome.size() << '\n'
+                  << "number of synapses used: " << bestGenome.synapseGenome.size() << '\n'
+                  << "number of correct answers: " << bestGenome.numberOfCorrectAnswers << '\n';
         // show the network of best performer
-        for (const auto &gene : bestGenome.synapseGenome)
-        {
-            std::cout << '\n'
-                      << gene.first.startingNeuronID << ' ' << gene.first.endingNeuronID << ' ' << gene.second.weight;
-        }
+        // for (const auto &gene : bestGenome.synapseGenome)
+        // {
+        //     std::cout << '\n'
+        //               << gene.first.startingNeuronID << ' ' << gene.first.endingNeuronID << ' ' << gene.second.weight;
+        // }
 
         // Network bestNetwork(m_neuronPool, bestGenome);
         // bestNetwork.draw(_window);
@@ -249,7 +258,7 @@ public:
                 if (whetherToMutate[childIndex])
                     mutate(children[childIndex]);
 
-                //push the child to the m_individualGenePool
+                // push the child to the m_individualGenePool
                 m_individualGenomes.push_back(children[childIndex]);
             }
         }

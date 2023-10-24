@@ -65,6 +65,7 @@ struct Genome
     SynapseGenome synapseGenome;
 
     float score; // denotes how well this brain performed
+    unsigned numberOfCorrectAnswers;
 
     Genome cross(const Genome &_other)
     {

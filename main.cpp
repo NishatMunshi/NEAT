@@ -22,12 +22,12 @@ int main()
         //     if (_event.type == sf::Event::Closed)
         //         window.close();
         // }
-
-        for (unsigned generation = 0; generation < 1000; ++generation)
+     unsigned generation = 0u;
+        while(true)
         {
             neat.play_generation();
 
-            std::cout << "\n\ngeneration " << generation << ' ';
+            std::cout << "\n\ngeneration " << generation++ << ' ';
 
             // window.clear();
             neat.print_best_scorer();
